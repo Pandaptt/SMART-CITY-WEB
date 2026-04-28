@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart City Dashboard | Thành Phố Thông Minh</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader"></div>
+        <div class="loading-text">CONNECTING TO SYSTEM...</div>
+    </div>
+
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <header>
+        <div class="logo">
+    <div class="logo-icon">
+        <img src="logo.png" alt="Smart City Logo" style="width: 100%; height: 100%; object-fit: contain;">
+    </div>
+    <div>
+        <h1>Smart City</h1>
+        <span>Dashboard v2.0</span>
+    </div>
+</div>
+
+        <nav class="header-nav">
+            <button class="nav-btn active" id="nav-dash" onclick="switchTab('dashboard')">
+                <span class="nav-dot"></span> GIÁM SÁT
+            </button>
+            <button class="nav-btn" id="nav-ctrl" onclick="switchTab('control')">
+                <span class="nav-dot"></span> ĐIỀU KHIỂN
+            </button>
+        </nav>
+
+        <div class="header-status">
+            <div class="status-item">
+                <div class="status-dot" id="connectionStatus"></div>
+                <span id="connectionText">Đang kết nối...</span>
+            </div>
+            <div class="datetime" id="datetime"></div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="dashboard-section" class="tab-content active">
+            <div class="section-title">
+                <h2>🌿 Giám Sát Môi Trường</h2>
+                <div class="section-line"></div>
+            </div>
+            
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon"><svg viewBox="0 0 24 24"><path d="M17.66 7.93L12 2.27 6.34 7.93c-3.12 3.12-3.12 8.19 0 11.31A7.98 7.98 0 0012 21.58a7.98 7.98 0 005.66-2.34c3.12-3.12 3.12-8.19 0-11.31zM12 19.59c-1.6 0-3.11-.62-4.24-1.76C6.62 16.69 6 15.19 6 13.59s.62-3.11 1.76-4.24L12 5.1v14.49z"/></svg></div>
+                        <span class="card-badge badge-good" id="aqiBadge">Tốt</span>
+                    </div>
+                    <div class="card-value"><span id="aqiValue">--</span><span class="unit">AQI</span></div>
+                    <div class="card-label">Chất lượng không khí</div>
+                    <div class="progress-bar"><div class="progress-fill" id="aqiProgress"></div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
+                        <span class="card-badge badge-good" id="pm25Badge">An toàn</span>
+                    </div>
+                    <div class="card-value"><span id="pm25Value">--</span><span class="unit">μg/m³</span></div>
+                    <div class="card-label">Bụi mịn PM2.5</div>
+                    <div class="progress-bar"><div class="progress-fill" id="pm25Progress"></div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><div class="card-icon"><svg viewBox="0 0 24 24"><path d="M15 13V5c0-1.66-1.34-3-3-3S9 3.34 9 5v8c-1.21.91-2 2.37-2 4 0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.63-.79-3.09-2-4zm-4-8c0-.55.45-1 1-1s1 .45 1 1h-1v1h1v2h-1v1h1v2h-2V5z"/></svg></div></div>
+                    <div class="card-value"><span id="tempValue">--</span><span class="unit">°C</span></div>
+                    <div class="card-label">Nhiệt độ</div>
+                    <div class="progress-bar"><div class="progress-fill" id="tempProgress"></div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><div class="card-icon"><svg viewBox="0 0 24 24"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8zm0 18c-3.35 0-6-2.57-6-6.2 0-2.34 1.95-5.44 6-9.14 4.05 3.7 6 6.79 6 9.14 0 3.63-2.65 6.2-6 6.2z"/></svg></div></div>
+                    <div class="card-value"><span id="humidityValue">--</span><span class="unit">%</span></div>
+                    <div class="card-label">Độ ẩm</div>
+                    <div class="progress-bar"><div class="progress-fill" id="humidityProgress"></div></div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <h2>🚗 Quản Lý Giao Thông</h2>
+                <div class="section-line"></div>
+            </div>
+
+            <div class="map-section">
+                <div class="map-container">
+                    <div class="map-header">
+                        <h3>Bản Đồ Mật Độ</h3>
+                        <div class="map-controls">
+                            <button class="map-btn active" onclick="showTrafficLayer()">Giao thông</button>
+                            <button class="map-btn" onclick="showParkingLayer()">Bãi đỗ xe</button>
+                        </div>
+                    </div>
+                    <div id="cityMap"></div>
+                </div>
+                <div class="parking-list">
+                    <div class="parking-header"><h3>Bãi Đỗ Xe Trống</h3></div>
+                    <div class="parking-items" id="parkingList"></div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <h2>📹 Camera AI Giám Sát</h2>
+                <div class="section-line"></div>
+            </div>
+            <div class="camera-grid" id="cameraGrid"></div>
+
+            <div class="vertical-charts-bar">
+                <div class="stat-chart-item">
+                    <div class="chart-header">
+                        <div class="stat-label">LƯU LƯỢNG XE (24H)</div>
+                        <div class="stat-value"><span id="totalVehicles">--</span> <span class="unit">xe/h</span></div>
+                    </div>
+                    <div class="chart-container" style="height: 100px; position: relative;">
+                        <canvas id="trafficLineChart"></canvas>
+                    </div>
+                </div>
+                <div class="stat-chart-item">
+                    <div class="chart-header">
+                        <div class="stat-label">TỐC ĐỘ TRUNG BÌNH (24H)</div>
+                        <div class="stat-value"><span id="avgSpeed">--</span> <span class="unit">km/h</span></div>
+                    </div>
+                    <div class="chart-container" style="height: 100px; position: relative;">
+                        <canvas id="speedLineChart"></canvas>
+                    </div>
+                </div>
+                <div class="stat-chart-item">
+                    <div class="chart-header">
+                        <div class="stat-label">Tai nạn giao thông (NĂM)</div>
+                        <div class="stat-value"><span id="incidents">--</span> <span class="unit">vụ</span></div>
+                    </div>
+                    <div class="chart-container" style="height: 100px; position: relative;">
+                        <canvas id="incidentsBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="control-section" class="tab-content">
+    <div class="section-title">
+        <h2>⚙️ Hệ Thống Điều Khiển</h2>
+        <div class="section-line"></div>
+    </div>
+    
+    <div class="cards-grid">
+        <div class="card control-card" id="card-light">
+    <div class="card-header">
+        <div class="card-icon" id="light-icon-container">
+            <img src="logo.png" id="light-icon" alt="Light Icon" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <span class="card-badge badge-auto" id="light-status-badge">AUTO</span>
+    </div>
+    <div class="card-label">Hệ thống chiếu sáng</div>
+    <div class="mode-control-group">
+        <button class="btn-mode btn-auto active" id="btn-light-auto" onclick="setLightMode('auto')">AUTO</button>
+        <button class="btn-mode btn-on" id="btn-light-on" onclick="setLightMode('on')">ON</button>
+    </div>
+</div>
+
+        <div class="card control-card" id="card-camera" onclick="toggleDevice('camera')">
+    <div class="card-header">
+        <div class="card-icon">
+            <img src="camera_off.png" id="camera-icon" alt="Camera Status" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <div class="toggle-switch"></div>
+    </div>
+    <div class="card-label">Hệ thống Camera</div>
+    <div class="card-value"><span id="status-camera">OFF</span></div>
+</div>
+
+        <div class="card control-card" id="card-sensor">
+            <div class="card-header">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17z"/></svg>
+                </div>
+                <div class="mode-container">
+                    <span class="mode-label-text" id="mode-text">MANUAL</span>
+                    <label class="switch-mode">
+                        <input type="checkbox" id="sensorModeCheckbox" onchange="toggleSensorMode()">
+                        <span class="slider-mode"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="card-label">Hệ thống đèn giao thông</div>
+            <div class="sensor-controls" id="sensorControls">
+                <button class="btn-ctrl btn-red active" id="btn-red" onclick="setSensorColor('red')">RED</button>
+                <button class="btn-ctrl btn-green" id="btn-green" onclick="setSensorColor('green')">GREEN</button>
+            </div>
+        </div>
+    </div>
+</section>
+    </main>
+
+    <footer>
+        <div class="footer-info"><span>Smart City Dashboard © 2026 | Powered by Firebase</span></div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
